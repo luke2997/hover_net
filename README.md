@@ -8,11 +8,6 @@ A multiple branch network that performs nuclear instance segmentation and classi
 
 Datasets can be found here [this link](https://warwick.ac.uk/fac/sci/dcs/research/tia/data/). <br />
 
-## Overlaid Segmentation and Classification Prediction
-
-<p float="left">
-  <img src="/seg.gif" alt="Segmentation" width="870" />
-</p>
 
 The colour of the nuclear boundary denotes the type of nucleus. <br />
 Blue: epithelial<br />
