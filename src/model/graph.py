@@ -1,11 +1,12 @@
 
 import tensorflow as tf
-
 from tensorpack import *
-from tensorpack.models import BatchNorm, BNReLU, Conv2D, MaxPooling, FixedUnPooling
+from tensorpack.models import BatchNorm, BNReLU, Conv2D, MaxPooling, FixedUnPooling, AvgPooling
 from tensorpack.tfutils.summary import add_moving_summary, add_param_summary
 
 from .utils import *
+
+from .encoders import inception_encoder, densenet_encoder
 
 import sys
 sys.path.append("..") # adds higher directory to python modules path.
@@ -23,7 +24,12 @@ def upsample2x(name, x):
                 name, x, 2, unpool_mat=np.ones((2, 2), dtype='float32'),
                 data_format='channels_first')
 ####
+
+
 def res_blk(name, l, ch, ksize, count, split=1, strides=1, freeze=False):
+##########################################
+#Resnet50 block
+##########################################
     ch_in = l.get_shape().as_list()
     with tf.variable_scope(name):
         for i in range(0, count):
@@ -40,7 +46,48 @@ def res_blk(name, l, ch, ksize, count, split=1, strides=1, freeze=False):
         # end of each group need an extra activation
         l = BNReLU('bnlast',l)  
     return l
+
+##Check about this
+def res_blk3(name, l, ch, ksize, count, split=1, strides=1, freeze=False):
+    ch_in = l.get_shape().as_list()
+    with tf.variable_scope(name):
+        for i in range(0, count):
+            with tf.variable_scope('block' + str(i)):  
+                x = l if i == 0 else BNReLU('preact', l)
+                x = Conv2D('conv1', x, ch[0], ksize[0], activation=BNReLU)
+                x = Conv2D('conv2', x, ch[1], ksize[1], split=split, 
+                                strides=strides if i == 0 else 1, activation=BNReLU)
+                x = Conv2D('conv2', x, ch[1], ksize[1], split=split,
+                                strides=strides if i == 0 else 1, activation=BNReLU)
+                if (strides != 1) and i == 0:
+                    l = Conv2D('convshortcut', l, ch[1], 1, strides=strides)
+                l = l + x
+        # end of each group need an extra activation
+        l = BNReLU('bnlast',l)  
+    return l
 ####
+
+def res_blk2(name, l, ch, ksize, count, split=1, strides=1, freeze=False):
+##########################################
+#Resnet34 block
+##########################################
+    ch_in = l.get_shape().as_list()
+    with tf.variable_scope(name):
+        for i in range(0, count):
+            with tf.variable_scope('block' + str(i)):
+                x = l if i == 0 else BNReLU('preact', l)
+                x = Conv2D('conv1', x, ch[0], ksize[0], activation=BNReLU)
+                x = Conv2D('conv2', x, ch[1], ksize[1], split=split,
+                                strides=strides if i == 0 else 1, activation=BNReLU)
+                if (strides != 1) and i == 0:
+                    l = Conv2D('convshortcut', l, ch[1], 1, strides=strides)
+                x = tf.stop_gradient(x) if freeze else x
+                l = l + x
+        # end of each group need an extra activation
+        l = BNReLU('bnlast',l)
+    return l
+####
+
 def dense_blk(name, l, ch, ksize, count, split=1, padding='valid'):
     with tf.variable_scope(name):
         for i in range(0, count):
@@ -59,7 +106,8 @@ def dense_blk(name, l, ch, ksize, count, split=1, padding='valid'):
         l = BNReLU('blk_bna', l)
     return l
 ####
-def encoder(i, freeze):
+
+def encoder50(i, freeze):
     """
     Pre-activated ResNet50 Encoder
     """
@@ -78,8 +126,49 @@ def encoder(i, freeze):
     
     d4 = Conv2D('conv_bot',  d4, 1024, 1, padding='same')
     return [d1, d2, d3, d4]
+    
+def encoder(i, freeze):
+    """
+    Pre-activated ResNet34 Encoder
+    """
+
+    d1 = Conv2D('conv0',  i, 64, 7, padding='valid', strides=1, activation=BNReLU)
+    d1 = res_blk2('group0', d1, [64,  64], [3,3], 3, strides=1, freeze=freeze)
+
+    d2 = res_blk2('group1', d1, [128, 128], [3,3], 4, strides=2, freeze=freeze)
+    d2 = tf.stop_gradient(d2) if freeze else d2
+
+    d3 = res_blk2('group2', d2, [256, 256], [3,3], 6, strides=2, freeze=freeze)
+    d3 = tf.stop_gradient(d3) if freeze else d3
+
+    d4 = res_blk2('group3', d3, [512, 512], [3,3], 3, strides=2, freeze=freeze)
+    d4 = tf.stop_gradient(d4) if freeze else d4
+
+    d4 = Conv2D('conv_bot', d4, 256, 1, padding='same')
+    return [d1, d2, d3, d4]
 ####
-def decoder(name, i):
+
+def encoder3(i, freeze):
+    """
+    Pre-activated ResNet101 Encoder
+    """
+
+    d1 = Conv2D('conv0',  i, 64, 7, padding='valid', strides=1, activation=BNReLU)
+    d1 = res_blk('group0', d1, [64,  64,256], [1,3,1], 3, strides=1, freeze=freeze)                       
+    
+    d2 = res_blk('group1', d1, [128, 128,512], [1,3,1], 4, strides=2, freeze=freeze)
+    d2 = tf.stop_gradient(d2) if freeze else d2
+
+    d3 = res_blk('group2', d2, [256, 256,1024], [1,3,1], 23, strides=2, freeze=freeze)
+    d3 = tf.stop_gradient(d3) if freeze else d3
+
+    d4 = res_blk('group3', d3, [512, 512,2048], [1,3,1], 3, strides=2, freeze=freeze)
+    d4 = tf.stop_gradient(d4) if freeze else d4
+    
+    d4 = Conv2D('conv_bot', d4, 1024, 1, padding='same')
+    return [d1, d2, d3, d4]
+####
+def decoder2(name, i):
     pad = 'valid' # to prevent boundary artifacts
     with tf.variable_scope(name):
         with tf.variable_scope('u3'):
@@ -88,7 +177,7 @@ def decoder(name, i):
 
             u3 = Conv2D('conva', u3_sum, 256, 5, strides=1, padding=pad)   
             u3 = dense_blk('dense', u3, [128, 32], [1, 5], 8, split=4, padding=pad)
-            u3 = Conv2D('convf', u3, 512, 1, strides=1)   
+            u3 = Conv2D('convf', u3, 128, 1, strides=1)   
         ####
         with tf.variable_scope('u2'):          
             u2 = upsample2x('rz', u3)
@@ -96,7 +185,7 @@ def decoder(name, i):
 
             u2x = Conv2D('conva', u2_sum, 128, 5, strides=1, padding=pad)
             u2 = dense_blk('dense', u2x, [128, 32], [1, 5], 4, split=4, padding=pad)
-            u2 = Conv2D('convf', u2, 256, 1, strides=1)   
+            u2 = Conv2D('convf', u2, 64, 1, strides=1) 
         ####
         with tf.variable_scope('u1'):          
             u1 = upsample2x('rz', u2)
@@ -107,17 +196,48 @@ def decoder(name, i):
     return [u3, u2x, u1]
 
 ####
+
+def decoder(name, i):
+    pad = 'valid' # to prevent boundary artifacts
+    with tf.variable_scope(name):
+        with tf.variable_scope('u3'):
+            u3 = upsample2x('rz', i[-1])
+            u3_sum = tf.add_n([u3, i[-2]])
+
+            u3 = Conv2D('conva', u3_sum, 256, 5, strides=1, padding=pad)   
+            u3 = dense_blk('dense', u3, [128, 32], [1, 5], 8, split=4, padding=pad)
+            u3 = Conv2D('convf', u3, i[-3].shape[1].value, 1, strides=1) 
+        ####
+        with tf.variable_scope('u2'):          
+            u2 = upsample2x('rz', u3)
+            u2_sum = tf.add_n([u2, i[-3]])
+
+            u2x = Conv2D('conva', u2_sum, 128, 5, strides=1, padding=pad)
+            u2 = dense_blk('dense', u2x, [128, 32], [1, 5], 4, split=4, padding=pad)
+            u2 = Conv2D('convf', u2, i[-4].shape[1].value, 1, strides=1)   
+        ####
+        with tf.variable_scope('u1'):          
+            u1 = upsample2x('rz', u2)
+            u1_sum = tf.add_n([u1, i[-4]])
+
+            u1 = Conv2D('conva', u1_sum, 64, 5, strides=1, padding='same')
+
+    return [u3, u2x, u1]
+
+
+####
 class Model(ModelDesc, Config):
-    def __init__(self, freeze=False):
+    def __init__(self, freeze=False, encoder_name='default'):
         super(Model, self).__init__()
         assert tf.test.is_gpu_available()
         self.freeze = freeze
         self.data_format = 'NCHW'
+        self.encoder_name = encoder_name
 
     def _get_inputs(self):
         return [InputDesc(tf.float32, [None] + self.train_input_shape + [3], 'images'),
                 InputDesc(tf.float32, [None] + self.train_mask_shape  + [None], 'truemap-coded')]
-    
+
     # for node to receive manual info such as learning rate.
     def add_manual_variable(self, name, init_value, summary=True):
         var = tf.get_variable(name, initializer=init_value, trainable=False)
@@ -161,13 +281,19 @@ class Model_NP_HV(Model):
         ####
         with argscope(Conv2D, activation=tf.identity, use_bias=False, # K.he initializer
                       W_init=tf.variance_scaling_initializer(scale=2.0, mode='fan_out')), \
-                argscope([Conv2D, BatchNorm], data_format=self.data_format):
+                argscope([Conv2D, BatchNorm, MaxPooling, AvgPooling], data_format=self.data_format):
 
             i = tf.transpose(images, [0, 3, 1, 2])
             i = i if not self.input_norm else i / 255.0
 
             ####
-            d = encoder(i, self.freeze)
+            #d = encoder(i, self.freeze)
+            if self.encoder_name == 'inception':
+              d = inception_encoder(i, self.freeze)
+            elif self.encoder_name == 'densenet':
+              d = densenet_encoder(i, self.freeze)
+            else:
+              d = encoder(i, self.freeze)
             d[0] = crop_op(d[0], (184, 184))
             d[1] = crop_op(d[1], (72, 72))
 
@@ -211,11 +337,9 @@ class Model_NP_HV(Model):
             """
             Calculate the horizontal partial differentiation for horizontal channel
             and the vertical partial differentiation for vertical channel.
-
             The partial differentiation is approximated by calculating the central differnce
             which is obtained by using Sobel kernel of size 5x5. The boundary is zero-padded
             when channel is convolved with the Sobel kernel.
-
             Args:
                 l (tensor): tensor of shape NHWC with C should be 2 (1 channel for horizonal 
                             and 1 channel for vertical)
@@ -246,22 +370,63 @@ class Model_NP_HV(Model):
             dv = tf.nn.conv2d(v, mv, strides=[1, 1, 1, 1], padding='SAME')
             output = tf.concat([dh, dv], axis=-1)
             return output
-        def loss_mse(true, pred, name=None):
-            ### regression loss
+        
+#######################################################
+#                  LOSS FUNCTIONS
+#######################################################
+
+#Loss for distances using horizontal/vertical distance to nuclear centroids.
+
+        def loss_mse(true,pred,name=None):
+            ###########################
+            #Standard MSE:
+            ###########################
             loss = pred - true
             loss = tf.reduce_mean(loss * loss, name=name)
+            
             return loss
+        
+        
+        def loss_huber(true,pred,name=None):
+            ###########################
+            #Standard Huber Loss:
+            ###########################
+            alpha = 0.5
+            huber_mse = alpha*(true-pred)**2
+            huber_mae = alpha*tf.math.abs(true-pred)
+            loss = tf.where((tf.math.abs(true - pred)) <= alpha, huber_mse, huber_mae,name=name)
+            
+            return tf.reduce_mean(loss)  
+        
+        
+        def loss_huber_smooth(true,pred,name=None):
+            ###########################
+            #Smoother Huber Loss:
+            ###########################
+            alpha = 0.5
+            delta = 2/5
+            eps = 1e-6
+            huber_mse = alpha*(true-pred)**2
+            huber_mae = alpha*tf.log((1+tf.math.exp(5*(true-pred+eps)))/2)**(delta) -(true-pred)
+            #loss = 0.5*tf.log((1+tf.math.exp(5*(true-pred))/2)  + eps)**(delta) - (true-pred)
+            loss = tf.where((tf.math.abs(true - pred)) <= alpha, huber_mse, huber_mae,name=name)
+            return tf.reduce_mean(loss)  
+  
+    
         def loss_msge(true, pred, focus, name=None):
+            ###########################
+            #MSE of gradients:
+            ###########################
             focus = tf.stack([focus, focus], axis=-1)
             pred_grad = get_gradient_hv(pred, 1, 0)
-            true_grad = get_gradient_hv(true, 1, 0) 
+            true_grad = get_gradient_hv(true, 1, 0)
             loss = pred_grad - true_grad
             loss = focus * (loss * loss)
             # artificial reduce_mean with focus region
             loss = tf.reduce_sum(loss) / (tf.reduce_sum(focus) + 1.0e-8)
             loss = tf.identity(loss, name=name)
             return loss
-
+        
         ####
         if get_current_tower_context().is_training:
             #---- LOSS ----#
@@ -336,6 +501,8 @@ class Model_NP_HV(Model):
 
             viz = tf.concat([viz[0], viz[-1]], axis=0)
             viz = tf.expand_dims(viz, axis=0)
+            #print(viz.name)
+            viz_size = (240, 160)
             tf.summary.image('output', viz, max_outputs=1)
 
         return
@@ -378,9 +545,11 @@ class Model_NP_DIST(Model):
             dist = BNReLU('preact_out_dist', dist_feat[-1])
 
             ####
-            logi_np = Conv2D('conv_out_np', np, 2, 1, use_bias=True, activation=tf.identity)
+            #logi_np = Conv2D('conv_out_np', np, 2, 1, use_bias=True, activation=tf.identity)
+            logi_np = Conv2D('conv_out_np', npx, 2, 1, use_bias=True, activation=tf.identity, bias_initializer=tf.constant_initializer(value=-np.log((1 - 0.05) / 0.05)))
             logi_np = tf.transpose(logi_np, [0, 2, 3, 1])
-            soft_np = tf.nn.softmax(logi_np, axis=-1)
+            soft_np = tf.nn.sigmoid(logi_np)
+            #Change to this for prior dist soft_np = tf.nn.sigmoid(logi_np)
             prob_np = tf.identity(soft_np[...,1], name='predmap-prob-np')
             prob_np = tf.expand_dims(prob_np, axis=-1)
             pred_np = tf.argmax(soft_np, axis=-1, name='predmap-np')
