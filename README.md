@@ -2,26 +2,11 @@
 
 A multiple branch network that performs nuclear instance segmentation and classification within a single network. The network leverages the horizontal and vertical distances of nuclear pixels to their centres of mass to separate clustered cells. A dedicated up-sampling branch is used to classify the nuclear type for each segmented instance. <br />
 
-This is an extended version of our previous work: XY-Net.  <br />
-
-[Link](https://www.sciencedirect.com/science/article/abs/pii/S1361841519301045?via%3Dihub) to Medical Image Analysis paper. 
-
-**NEWS:** We have now released an inference version of HoVer-Net with WSI-processing capability trained on ~200,000 nuclei. For further information, click [here](https://github.com/simongraham/hovernet_inference).
-
-## Set Up Environment
-
-```
-conda create --name hovernet python=3.6
-conda activate hovernet
-pip install -r requirements.txt
 ```
 
 ## Dataset
 
 Download the CoNSeP dataset as used in our paper from [this link](https://warwick.ac.uk/fac/sci/dcs/research/tia/data/hovernet/). <br />
-Download the Kumar, CPM-15, CPM-17 and TNBC datsets from [this link](https://drive.google.com/open?id=1l55cv3DuY-f7-JotDN7N5nbNnjbLWchK).  <br />
-
-Ground truth files are in `.mat` format, refer to the README included with the datasets for further information. 
 
 ## Repository Structure
 
@@ -41,23 +26,6 @@ Ground truth files are in `.mat` format, refer to the README included with the d
 
 ![](diagram.png)
 
-
-## Citation
-
-If any part of this code is used, please give appropriate citation to our paper. <br />
-
-BibTex entry: <br />
-```
-@article{graham2019hover,
-  title={Hover-net: Simultaneous segmentation and classification of nuclei in multi-tissue histology images},
-  author={Graham, Simon and Vu, Quoc Dang and Raza, Shan E Ahmed and Azam, Ayesha and Tsang, Yee Wah and Kwak, Jin Tae and Rajpoot, Nasir},
-  journal={Medical Image Analysis},
-  pages={101563},
-  year={2019},
-  publisher={Elsevier}
-}
-```
-
 ## Overlaid Segmentation and Classification Prediction
 
 <p float="left">
@@ -69,11 +37,6 @@ Blue: epithelial<br />
 Red: inflammatory <br />
 Green: spindle-shaped <br />
 Cyan: miscellaneous
-
-## Authors
-
-* [Quoc Dang Vu](https://github.com/vqdang)
-* [Simon Graham](https://github.com/simongraham)
 
 ## Additional Implementations available 
  
@@ -96,11 +59,7 @@ All comparative results on the CoNSeP, Kumar and CPM-17 datasets can be found [h
 
 The cell profiler pipeline that we used in our comparative experiments can be found [here](https://drive.google.com/file/d/1E5UII9fsYT2N2KBUNLS89OV9AstYDLlZ/view?usp=sharing).
 
-## Companion Sites
-The same version of this repository is officially available on the following sites for collection/affiliation purpose
 
-* [Tissue Image Analytics Lab](https://github.com/TIA-Lab)
-* [Quantitative Imaging and Informatics Laboratory](https://github.com/QuIIL)
 
 ## License
 
