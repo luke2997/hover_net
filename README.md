@@ -1,6 +1,6 @@
 # HoVer-Net: Simultaneous Segmentation and Classification of Nuclei in Multi-Tissue Histology Images
 
-Mainly used and edited backbone code of HoVer Net paper with new loss functions and various encoders implemented. <br />
+This code is based on the implementation of [Quoc Dang Vu](https://github.com/vqdang) and [Simon Graham](https://github.com/simongraham) available at [this link](https://github.com/vqdang/hover_net). This code uses new loss functions with various encoders implemented. <br />
 
 
 
@@ -26,8 +26,7 @@ The cell profiler pipeline that we used in our comparative experiments can be fo
 
 # PanNuke Challenge
 
-* The implementation by Team 11: Eugenia Martynova, Lili Mészáros, Denise Meerkerk, Linda Schmeitz, Enrico Schmitz and Luca Carotenuto.
-* Micro-Net and Hover-Net are based on the implementation of [Quoc Dang Vu](https://github.com/vqdang) and [Simon Graham](https://github.com/simongraham) available at [this link](https://github.com/vqdang/hover_net).
+* Thanks to the code from Eugenia Martynova, Lili Mészáros, Denise Meerkerk, Linda Schmeitz, Enrico Schmitz and Luca Carotenuto.
 * The evaluation is taken from [TIA-Lab/PanNuke-metrics](https://github.com/TIA-Lab/PanNuke-metrics).
 
 
