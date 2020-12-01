@@ -1,6 +1,6 @@
 # HoVer-Net: Simultaneous Segmentation and Classification of Nuclei in Multi-Tissue Histology Images
 
-A multiple branch network that performs nuclear instance segmentation and classification within a single network. The network leverages the horizontal and vertical distances of nuclear pixels to their centres of mass to separate clustered cells. A dedicated up-sampling branch is used to classify the nuclear type for each segmented instance. <br />
+Mainly used and edited backbone code of HoVer Net paper with new loss functions and various encoders implemented. <br />
 
 
 
@@ -14,15 +14,6 @@ Blue: epithelial<br />
 Red: inflammatory <br />
 Green: spindle-shaped <br />
 Cyan: miscellaneous
-
-## Additional Implementations available 
- 
-* [FCN8](https://people.eecs.berkeley.edu/~jonlong/long_shelhamer_fcn.pdf)
-* [U-Net](https://arxiv.org/pdf/1505.04597.pdf)
-* [SegNet](https://arxiv.org/pdf/1511.00561.pdf)
-* [DCAN](https://www.sciencedirect.com/science/article/abs/pii/S1361841516302043) 
-* [Micro-Net](https://www.sciencedirect.com/science/article/abs/pii/S1361841518300628)
-* [DIST](https://ieeexplore.ieee.org/document/8438559)
 
 ## Results
 
