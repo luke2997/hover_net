@@ -1,6 +1,6 @@
 import numpy as np
 import os
-import stain_norm as NS
+import StainNormv2 as NS
 
 images_1 = np.load('/projects/0/ismi2018/PanNuke/Fold-1/images/fold1/images.npy')
 masks_1 = np.load('/projects/0/ismi2018/PanNuke/Fold-1/masks/fold1/masks.npy')
