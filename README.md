@@ -24,7 +24,7 @@ All comparative results on the CoNSeP, Kumar and CPM-17 datasets can be found [h
 The cell profiler pipeline that we used in our comparative experiments can be found [here](https://drive.google.com/file/d/1E5UII9fsYT2N2KBUNLS89OV9AstYDLlZ/view?usp=sharing).
 
 
-# PanNuke Challenge
+# PanNuke Dataset
 
 * Thanks to the code from Eugenia Martynova, Lili Mészáros, Denise Meerkerk, Linda Schmeitz, Enrico Schmitz and Luca Carotenuto.
 * The evaluation is taken from [TIA-Lab/PanNuke-metrics](https://github.com/TIA-Lab/PanNuke-metrics).
