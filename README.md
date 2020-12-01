@@ -44,18 +44,12 @@ pip install -r requirements.txt
 5. An optional step is stain normalisation with `src/normalizeStaining.py`. This is added to `src/transform_pannuke.py`, but can be changed in the settings of the `transform` function. With the used stain normalisation implementation a few images in each fold are lost. Since their number is insignificant, we decided to ignore it, however, it should be handled properly. `src/remove_lost_mages.py` script removes the lost indices from the dataset (for `images.npy`, `types.npy` and `masks.npy`).
 
 ### Training
-6. In `src/config.py` the model type and paths need to be set depending on if we are training Micro-Net or Hover-Net at the moment. 
-* Hover-Net:
+6. In `src/config.py` the model type and paths need to be set 
 ```
 mode = 'hover'
 self.model_type = 'np_hv'
-```
-* Micro-Net:
-```
-mode = 'other'
-self.model_type = 'micronet'
-```
-* For the logging different paths need to be given, e.g. `self.log_path = '/hovernet_logs/'` and `self.log_path = '/micronet_logs/'`.   
+
+* For the logging different paths need to be given, e.g. `self.log_path = '/hovernet_logs/'`.   
 
 Our experimental setup follows the one from the original paper. The creators of the PanNuke dataset divided it into 3 splits (as described on the official dataset page https://warwick.ac.uk/fac/sci/dcs/research/tia/data/pannuke):   
 1) Training: Fold 1; Validation: Fold 2; Testing: Fold 3  
