@@ -48,8 +48,9 @@ pip install -r requirements.txt
 ```
 mode = 'hover'
 self.model_type = 'np_hv'
-
+```
 * For the logging different paths need to be given, e.g. `self.log_path = '/hovernet_logs/'`.   
+
 
 Our experimental setup follows the one from the original paper. The creators of the PanNuke dataset divided it into 3 splits (as described on the official dataset page https://warwick.ac.uk/fac/sci/dcs/research/tia/data/pannuke):   
 1) Training: Fold 1; Validation: Fold 2; Testing: Fold 3  
