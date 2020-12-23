@@ -6,7 +6,7 @@ from tensorpack.tfutils.summary import add_moving_summary, add_param_summary
 
 from .utils import *
 
-from .encoders import inception_encoder, densenet_encoder
+#from .encoders import inception_encoder, densenet_encoder
 
 import sys
 sys.path.append("..") # adds higher directory to python modules path.
