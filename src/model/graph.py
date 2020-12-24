@@ -1,12 +1,12 @@
-
 import tensorflow as tf
+
 from tensorpack import *
 from tensorpack.models import BatchNorm, BNReLU, Conv2D, MaxPooling, FixedUnPooling, AvgPooling
 from tensorpack.tfutils.summary import add_moving_summary, add_param_summary
 
 from .utils import *
 
-#from .encoders import inception_encoder, densenet_encoder
+from .encoders import inception_encoder, densenet_encoder
 
 import sys
 sys.path.append("..") # adds higher directory to python modules path.
@@ -197,8 +197,29 @@ def decoder2(name, i):
 
 ####
 
-def decoder(name, i):
-    pad = 'valid' # to prevent boundary artifacts
+def atrous_spatial_pyramid_pooling(x, filters=64):
+  
+  pad = 'valid'      
+  with tf.variable_scope('ASSP_layers'):
+
+    image_level_features = tf.reduce_mean(x, [2, 3], keep_dims=True)
+    image_level_features = Conv2D('image_level_features', image_level_features, filters, 1, strides=1, padding=pad, activation=BNReLU) 
+    image_level_features = FixedUnPooling('unp_image_level_features', image_level_features, shape=(x.shape[2].value, x.shape[3].value), data_format='channels_first') 
+
+    at_pool1x1   = Conv2D('at_pool1x1', x, filters, 1, strides=1, padding=pad, activation=BNReLU)  
+    at_pool3x3_1 = Conv2D('at_pool3x3_1', x, filters, 3, strides=1, padding='same', activation=BNReLU, dilation_rate=6)  
+    at_pool3x3_2 = Conv2D('at_pool3x3_2', x, filters, 3, strides=1, padding='same', activation=BNReLU, dilation_rate=12) 
+    at_pool3x3_3 = Conv2D('at_pool3x3_3', x, filters, 3, strides=1, padding='same', activation=BNReLU, dilation_rate=18) 
+
+    net = tf.concat((image_level_features, at_pool1x1, at_pool3x3_1, at_pool3x3_2, at_pool3x3_3), axis=1)
+
+    net =  Conv2D('at_out', net, filters, 1, strides=1, padding=pad, activation=BNReLU)
+
+    return net
+
+
+def decoder(name, i, use_assp=True):
+    pad = 'valid' 
     with tf.variable_scope(name):
         with tf.variable_scope('u3'):
             u3 = upsample2x('rz', i[-1])
@@ -206,7 +227,7 @@ def decoder(name, i):
 
             u3 = Conv2D('conva', u3_sum, 256, 5, strides=1, padding=pad)   
             u3 = dense_blk('dense', u3, [128, 32], [1, 5], 8, split=4, padding=pad)
-            u3 = Conv2D('convf', u3, i[-3].shape[1].value, 1, strides=1) 
+            u3 = Conv2D('convf', u3, i[-3].shape[1].value, 1, strides=1)   
         ####
         with tf.variable_scope('u2'):          
             u2 = upsample2x('rz', u3)
@@ -219,9 +240,11 @@ def decoder(name, i):
         with tf.variable_scope('u1'):          
             u1 = upsample2x('rz', u2)
             u1_sum = tf.add_n([u1, i[-4]])
-
             u1 = Conv2D('conva', u1_sum, 64, 5, strides=1, padding='same')
-
+        
+        if use_assp:
+          u1 = atrous_spatial_pyramid_pooling(u1)
+          
     return [u3, u2x, u1]
 
 
@@ -298,14 +321,14 @@ class Model_NP_HV(Model):
             d[1] = crop_op(d[1], (72, 72))
 
             ####
-            np_feat = decoder('np', d)
+            np_feat = decoder('np', d, self.use_assp)
             npx = BNReLU('preact_out_np', np_feat[-1])
 
-            hv_feat = decoder('hv', d)
+            hv_feat = decoder('hv', d, self.use_assp)
             hv = BNReLU('preact_out_hv', hv_feat[-1])
 
             if self.type_classification:
-                tp_feat = decoder('tp', d)
+                tp_feat = decoder('tp', d, self.use_assp))
                 tp = BNReLU('preact_out_tp', tp_feat[-1])
 
                 # Nuclei Type Pixels (TP)
