@@ -31,30 +31,7 @@ def bottleneck(inputs,
                outputs_collections=None,
                scope=None,
                use_bounded_activations=False):
-  """Bottleneck residual unit variant with BN after convolutions.
 
-  This is the original residual unit proposed in [1]. See Fig. 1(a) of [2] for
-  its definition. Note that we use here the bottleneck variant which has an
-  extra bottleneck layer.
-
-  When putting together two consecutive ResNet blocks that use this unit, one
-  should use stride = 2 in the last unit of the first block.
-
-  Args:
-    inputs: A tensor of size [batch, height, width, channels].
-    depth: The depth of the ResNet unit output.
-    depth_bottleneck: The depth of the bottleneck layers.
-    stride: The ResNet unit's stride. Determines the amount of downsampling of
-      the units output compared to its input.
-    rate: An integer, rate for atrous convolution.
-    outputs_collections: Collection to add the ResNet unit output.
-    scope: Optional variable_scope.
-    use_bounded_activations: Whether or not to use bounded activations. Bounded
-      activations better lend themselves to quantized inference.
-
-  Returns:
-    The ResNet unit's output.
-  """
   with tf.variable_scope(scope, 'bottleneck_v1', [inputs]) as sc:
     depth_in = slim.utils.last_dimension(inputs.get_shape(), min_rank=4)
     if depth == depth_in:
@@ -97,74 +74,7 @@ def resnet_v1(inputs,
               store_non_strided_activations=False,
               reuse=None,
               scope=None):
-  """Generator for v1 ResNet models.
 
-  This function generates a family of ResNet v1 models. See the resnet_v1_*()
-  methods for specific model instantiations, obtained by selecting different
-  block instantiations that produce ResNets of various depths.
-
-  Training for image classification on Imagenet is usually done with [224, 224]
-  inputs, resulting in [7, 7] feature maps at the output of the last ResNet
-  block for the ResNets defined in [1] that have nominal stride equal to 32.
-  However, for dense prediction tasks we advise that one uses inputs with
-  spatial dimensions that are multiples of 32 plus 1, e.g., [321, 321]. In
-  this case the feature maps at the ResNet output will have spatial shape
-  [(height - 1) / output_stride + 1, (width - 1) / output_stride + 1]
-  and corners exactly aligned with the input image corners, which greatly
-  facilitates alignment of the features to the image. Using as input [225, 225]
-  images results in [8, 8] feature maps at the output of the last ResNet block.
-
-  For dense prediction tasks, the ResNet needs to run in fully-convolutional
-  (FCN) mode and global_pool needs to be set to False. The ResNets in [1, 2] all
-  have nominal stride equal to 32 and a good choice in FCN mode is to use
-  output_stride=16 in order to increase the density of the computed features at
-  small computational and memory overhead, cf. http://arxiv.org/abs/1606.00915.
-
-  Args:
-    inputs: A tensor of size [batch, height_in, width_in, channels].
-    blocks: A list of length equal to the number of ResNet blocks. Each element
-      is a resnet_utils.Block object describing the units in the block.
-    num_classes: Number of predicted classes for classification tasks.
-      If 0 or None, we return the features before the logit layer.
-    is_training: whether batch_norm layers are in training mode. If this is set
-      to None, the callers can specify slim.batch_norm's is_training parameter
-      from an outer slim.arg_scope.
-    global_pool: If True, we perform global average pooling before computing the
-      logits. Set to True for image classification, False for dense prediction.
-    output_stride: If None, then the output will be computed at the nominal
-      network stride. If output_stride is not None, it specifies the requested
-      ratio of input to output spatial resolution.
-    include_root_block: If True, include the initial convolution followed by
-      max-pooling, if False excludes it.
-    spatial_squeeze: if True, logits is of shape [B, C], if false logits is
-        of shape [B, 1, 1, C], where B is batch_size and C is number of classes.
-        To use this parameter, the input images must be smaller than 300x300
-        pixels, in which case the output logit layer does not contain spatial
-        information and can be removed.
-    store_non_strided_activations: If True, we compute non-strided (undecimated)
-      activations at the last unit of each block and store them in the
-      `outputs_collections` before subsampling them. This gives us access to
-      higher resolution intermediate activations which are useful in some
-      dense prediction problems but increases 4x the computation and memory cost
-      at the last unit of each block.
-    reuse: whether or not the network and its variables should be reused. To be
-      able to reuse 'scope' must be given.
-    scope: Optional variable_scope.
-
-  Returns:
-    net: A rank-4 tensor of size [batch, height_out, width_out, channels_out].
-      If global_pool is False, then height_out and width_out are reduced by a
-      factor of output_stride compared to the respective height_in and width_in,
-      else both height_out and width_out equal one. If num_classes is 0 or None,
-      then net is the output of the last ResNet block, potentially after global
-      average pooling. If num_classes a non-zero integer, net contains the
-      pre-softmax activations.
-    end_points: A dictionary from components of the network to the corresponding
-      activation.
-
-  Raises:
-    ValueError: If the target output_stride is not valid.
-  """
   with tf.variable_scope(
       scope, 'resnet_v1', [inputs], reuse=reuse) as sc:
     end_points_collection = sc.original_name_scope + '_end_points'
