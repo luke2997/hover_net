@@ -107,6 +107,11 @@ def dense_blk(name, l, ch, ksize, count, split=1, padding='valid'):
     return l
 ####
 
+
+###############################################################
+##################### ENCODERS: ###############################
+###############################################################
+
 def encoder50(i, freeze):
     """
     Pre-activated ResNet50 Encoder
@@ -127,7 +132,7 @@ def encoder50(i, freeze):
     d4 = Conv2D('conv_bot',  d4, 1024, 1, padding='same')
     return [d1, d2, d3, d4]
     
-def encoder(i, freeze):
+def encoder34(i, freeze):
     """
     Pre-activated ResNet34 Encoder
     """
@@ -148,7 +153,7 @@ def encoder(i, freeze):
     return [d1, d2, d3, d4]
 ####
 
-def encoder3(i, freeze):
+def encoder101(i, freeze):
     """
     Pre-activated ResNet101 Encoder
     """
@@ -328,7 +333,7 @@ class Model_NP_HV(Model):
             hv = BNReLU('preact_out_hv', hv_feat[-1])
 
             if self.type_classification:
-                tp_feat = decoder('tp', d, self.use_assp))
+                tp_feat = decoder('tp', d, self.use_assp)
                 tp = BNReLU('preact_out_tp', tp_feat[-1])
 
                 # Nuclei Type Pixels (TP)
@@ -357,18 +362,6 @@ class Model_NP_HV(Model):
                 predmap_coded = tf.concat([prob_np, pred_hv], axis=-1, name='predmap-coded')
         ####
         def get_gradient_hv(l, h_ch, v_ch):
-            """
-            Calculate the horizontal partial differentiation for horizontal channel
-            and the vertical partial differentiation for vertical channel.
-            The partial differentiation is approximated by calculating the central differnce
-            which is obtained by using Sobel kernel of size 5x5. The boundary is zero-padded
-            when channel is convolved with the Sobel kernel.
-            Args:
-                l (tensor): tensor of shape NHWC with C should be 2 (1 channel for horizonal 
-                            and 1 channel for vertical)
-                h_ch(int) : index within C axis of `l` that corresponds to horizontal channel
-                v_ch(int) : index within C axis of `l` that corresponds to vertical channel
-            """
             def get_sobel_kernel(size):
                 assert size % 2 == 1, 'Must be odd, get size=%d' % size
 
@@ -567,12 +560,11 @@ class Model_NP_DIST(Model):
             dist_feat = decoder('dst', d)
             dist = BNReLU('preact_out_dist', dist_feat[-1])
 
-            ####
-            #logi_np = Conv2D('conv_out_np', np, 2, 1, use_bias=True, activation=tf.identity)
+            #### Initialise weights prior distn
             logi_np = Conv2D('conv_out_np', npx, 2, 1, use_bias=True, activation=tf.identity, bias_initializer=tf.constant_initializer(value=-np.log((1 - 0.05) / 0.05)))
+            
             logi_np = tf.transpose(logi_np, [0, 2, 3, 1])
-            soft_np = tf.nn.sigmoid(logi_np)
-            #Change to this for prior dist soft_np = tf.nn.sigmoid(logi_np)
+            soft_np = tf.nn.sigmoid(logi_np) #Change to softmax if not using focal 
             prob_np = tf.identity(soft_np[...,1], name='predmap-prob-np')
             prob_np = tf.expand_dims(prob_np, axis=-1)
             pred_np = tf.argmax(soft_np, axis=-1, name='predmap-np')
