@@ -1,18 +1,13 @@
-
-
 import importlib
 import random
-
 import cv2
 import numpy as np
 import tensorflow as tf
 from tensorpack import imgaug
-
 from loader.augs import (BinarizeLabel, GaussianBlur, GenInstanceDistance,
                          GenInstanceHV, MedianBlur, GenInstanceUnetMap,
-                         GenInstanceContourMap, CoarseDropout, CannyAug)
-
-#### 
+                         GenInstanceContourMap, CoarseDropout, SaltPepperNoise)
+ 
 class Config(object):
     def __init__(self, ):
 
@@ -20,25 +15,9 @@ class Config(object):
         mode = 'hover'
         self.model_type = 'np_hv'
 
-        self.type_classification = True # whether to predict the nuclear type
-        # ! must use CoNSeP dataset, where nuclear type labels are available
-        # denotes number of classes for nuclear type classification, 
-        # plus the background class
-        self.nr_types = 5
-        # ! some semantic segmentation network like micronet,
-        # ! nr_types will replace nr_classes if type_classification=True
+        self.type_classification = True
+        self.nr_types = 5 
         self.nr_classes = 2 # Nuclei Pixels vs Background
-
-        # define your nuclei type name here, please ensure it contains
-        # same the amount as defined in `self.nr_types` . ID 0 is preserved
-        # for background so please don't use it as ID
-        self.nuclei_type_dict = {
-            'Miscellaneous': 1, # ! Please ensure the matching ID is unique
-            'Inflammatory' : 2,
-            'Epithelial'   : 3,
-            'Spindle'      : 4,
-        }
-        assert len(self.nuclei_type_dict.values()) == self.nr_types - 1
 
         #### Dynamically setting the config file into variable
         if mode == 'hover':
@@ -71,9 +50,10 @@ class Config(object):
         self.data_ext = '.npy' 
         # list of directories containing validation patches. 
         # For both train and valid directories, a comma separated list of directories can be used
-        self.train_dir = ['../../../CoNSeP/train/%s/'  % data_code_dict[self.model_type]]
-        self.valid_dir = ['../../../CoNSeP/valid/%s/' % data_code_dict[self.model_type]]
 
+        #Stratified:
+        self.train_dir = ['/lustre/home/acct-clsyzs/clsyzs/Luke/hover_net-master/data/CoNSeP/Train_strat/%s/' % data_code_dict[self.model_type]]
+        self.valid_dir = ['/lustre/home/acct-clsyzs/clsyzs/Luke/hover_net-master/data/CoNSeP/Valid_strat/%s/' % data_code_dict[self.model_type]]
         # number of processes for parallel processing input
         self.nr_procs_train = 8 
         self.nr_procs_valid = 4 
@@ -82,24 +62,22 @@ class Config(object):
 
         ####
         exp_id = 'v1.0/'
+
         model_id = '%s' % self.model_type
         self.model_name = '%s/%s' % (exp_id, model_id)
         # loading chkpts in tensorflow, the path must not contain extra '/'
-        self.log_path = '/media/vqdang/logs/' # log root path - modify according to needs
+        self.log_path = '/lustre/home/acct-clsyzs/clsyzs/Luke/hover_net-master/src/media/logs/' # log root path - modify according to needs
         self.save_dir = '%s/%s' % (self.log_path, self.model_name) # log file destination
 
         #### Info for running inference
-        self.inf_auto_find_chkpt = True 
+        self.inf_auto_find_chkpt = False 
         # path to checkpoints will be used for inference, replace accordingly
-        self.inf_model_path  = self.save_dir + '/model-19640.index'
-
-        # output will have channel ordering as [Nuclei Type][Nuclei Pixels][Additional]
-        # where [Nuclei Type] will be used for getting the type of each instance
-        # while [Nuclei Pixels][Additional] will be used for extracting instances
+        self.inf_model_path  = '/lustre/home/acct-clsyzs/clsyzs/Luke/hover_net-master/src/media/logs/v1.0/np_hv/01/model-35600.index'
 
         self.inf_imgs_ext = '.png'
-        self.inf_data_dir = '../../../data/CoNSeP/test/Images/'
-        self.inf_output_dir = 'output/%s/%s/' % (exp_id, model_id)
+        self.inf_data_dir = '/lustre/home/acct-clsyzs/clsyzs/Luke/hover_net-master/data/CoNSeP/Test/Images/'
+        #self.inf_data_dir = '/lustre/home/acct-clsyzs/clsyzs/Luke/hover_net-master/data/PanNuke/test/'
+        self.inf_output_dir = '/lustre/home/acct-clsyzs/clsyzs/Luke/hover_net-master/src/output/%s/%s/' % (exp_id, model_id)
 
         # for inference during evalutaion mode i.e run by infer.py
         self.eval_inf_input_tensor_names = ['images']
@@ -135,7 +113,6 @@ class Config(object):
             imgaug.Flip(horiz=True),
             imgaug.CenterCrop(input_shape),
         ]
-
         input_augs = [
             imgaug.RandomApplyAug(
                 imgaug.RandomChooseAug(
@@ -153,9 +130,19 @@ class Config(object):
                 imgaug.Contrast((0.75, 1.25), clip=True),
                 ]),
             CoarseDropout(),
-            CannyAug(),
+            SaltPepperNoise(),
             imgaug.ToUint8(),
-        ]
+
+        ]  
+        #input_augs = [
+        #        [imgaug.Hue((-8, 8), rgb=True), 
+         #       imgaug.Saturation(0.2, rgb=True),
+          #      imgaug.Brightness(26, clip=True),  
+           #     imgaug.Contrast((0.75, 1.25), clip=True),
+            #    ]),
+           # CoarseDropout(),
+           # SaltPepperNoise(),
+           # imgaug.ToUint8(),]
 
         label_augs = []
         if self.model_type == 'unet' or self.model_type == 'micronet':
