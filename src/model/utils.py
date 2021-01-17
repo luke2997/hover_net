@@ -91,7 +91,12 @@ def crop_op(x, cropping, data_format='channels_first'):
     else:
         x = x[:,crop_t:-crop_b,crop_l:-crop_r]
     return x       
-####
+
+  
+########################################
+##########LOSS FUNCTIONS ################
+########################################
+
 
 def categorical_crossentropy(output, target):
     """
@@ -108,32 +113,6 @@ def categorical_crossentropy(output, target):
                             reduction_indices=len(output.get_shape()) - 1)
 ####
 def dice_loss(output, target, loss_type='sorensen', axis=None, smooth=1e-3):
-    """Soft dice (Sørensen or Jaccard) coefficient for comparing the similarity
-    of two batch of data, usually be used for binary image segmentation
-    i.e. labels are binary. The coefficient between 0 to 1, 1 means totally match.
-
-    Parameters
-    -----------
-    output : Tensor
-        A distribution with shape: [batch_size, ....], (any dimensions).
-    target : Tensor
-        The target distribution, format the same with `output`.
-    loss_type : str
-        ``jaccard`` or ``sorensen``, default is ``jaccard``.
-    axis : tuple of int
-        All dimensions are reduced, default ``[1,2,3]``.
-    smooth : float
-        This small value will be added to the numerator and denominator.
-            - If both output and target are empty, it makes sure dice is 1.
-            - If either output or target are empty (all pixels are background), 
-              dice = ```smooth/(small_value + smooth)``, then if smooth is very small, 
-              dice close to 0 (even the image values lower than the threshold), 
-              so in this case, higher smooth can have a higher dice.
-
-    Examples
-    ---------
-    >>> dice_loss = dice_coe(outputs, y_)
-    """
     target = tf.squeeze(tf.cast(target, tf.float32))
     output = tf.squeeze(tf.cast(output, tf.float32))
 
@@ -151,26 +130,42 @@ def dice_loss(output, target, loss_type='sorensen', axis=None, smooth=1e-3):
     ##
     return dice
 ####
-def colorize(value, vmin=None, vmax=None, cmap=None):
-    """
-    Arguments:
-      - value: input tensor, NHWC ('channels_last')
-      - vmin: the minimum value of the range used for normalization.
-        (Default: value minimum)
-      - vmax: the maximum value of the range used for normalization.
-        (Default: value maximum)
-      - cmap: a valid cmap named for use with matplotlib's `get_cmap`.
-        (Default: 'gray')
-    Example usage:
-    ```
-    output = tf.random_uniform(shape=[256, 256, 1])
-    output_color = colorize(output, vmin=0.0, vmax=1.0, cmap='viridis')
-    tf.summary.image('output', output_color)
-    ```
-    
-    Returns a 3D tensor of shape [height, width, 3], uint8.
-    """
 
+def focal_loss(output, target):
+    alpha = 0.05
+    gamma = 2
+    output /= tf.reduce_sum(output,
+                            reduction_indices=len(output.get_shape()) - 1,keepdims=True)
+    zeros = tf.zeros_like(output,dtype=output.dtype)
+    epsilon = tf.convert_to_tensor(10e-8, output.dtype.base_dtype)
+
+    output = tf.clip_by_value(output, epsilon, 1. - epsilon)
+    pos_p_sub = tf.where(target > zeros, target - output, zeros)
+    neg_p_sub = tf.where(target > zeros, zeros, output)
+    loss = -alpha* (pos_p_sub ** gamma) * tf.log(tf.clip_by_value(output, epsilon, 1.0)) \
+                              - (1 - alpha) * (neg_p_sub ** gamma) * tf.log(tf.clip_by_value(1.0 - output, epsilon, 1.0))
+
+    return tf.reduce_sum(loss,reduction_indices=len(output.get_shape()) - 1)
+####
+
+def tversky_loss(output, target, loss_type='sorensen', axis=None, smooth=1e-5):
+    alpha = 0.6
+    beta = 1 - alpha
+    target = tf.squeeze(tf.cast(target, tf.float32))
+    output = tf.squeeze(tf.cast(output, tf.float32))
+    inse = tf.reduce_sum(output * target, axis=axis)
+    l = tf.reduce_sum(output, axis=axis)
+    r = tf.reduce_sum(target, axis=axis)
+    tp = tf.reduce_sum(output * target, axis=axis)
+    fn = tf.reduce_sum(output * (1-target), axis=axis)
+    fp = tf.reduce_sum((1-output) * target, axis=axis)
+   
+    tversky = 1.0 - (tp + smooth) / (tp + alpha * fn + beta* fp + smooth)
+    return tversky
+  
+ ####
+
+def colorize(value, vmin=None, vmax=None, cmap=None):
     # normalize
     if vmin is None:
         vmin = tf.reduce_min(value, axis=[1,2])
