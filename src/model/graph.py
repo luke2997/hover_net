@@ -420,11 +420,12 @@ class Model_NP_HV(Model):
             #Smoother Huber Loss:
             ###########################
             alpha = 0.5
-            delta = 5
-            eps = 1e-6
+            delta = 2
+            eps = 1e-4
             huber_mse = alpha*(true-pred)**2
-            huber_mae = alpha*tf.log((1+tf.math.exp(5*(true-pred+eps)))/2)**(2/delta) -(true-pred)
+            #huber_mae = alpha*tf.log((1+tf.math.exp(5*(true-pred+eps)))/2)**(2/delta) -(true-pred)
             #loss = 0.5*tf.log((1+tf.math.exp(5*(true-pred))/2)  + eps)**(delta) - (true-pred)
+            huber_mae = alpha*tf.math.log((0.5*(1+tf.math.exp(delta*(true-pred)-eps)))**(2/delta))-(true-pred)
             loss = tf.where((tf.math.abs(true - pred)) <= alpha, huber_mse, huber_mae,name=name)
             return tf.reduce_mean(loss)  
   
