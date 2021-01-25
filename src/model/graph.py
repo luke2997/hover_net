@@ -5,7 +5,7 @@ from tensorpack.models import BatchNorm, BNReLU, Conv2D, MaxPooling, FixedUnPool
 from tensorpack.tfutils.summary import add_moving_summary, add_param_summary
 
 from .utils import *
-
+from nonlocal_resnet_utils import nonlocal_dot
 from .encoders import inception_encoder, densenet_encoder
 
 import sys
@@ -291,7 +291,8 @@ def decoder(name, i, use_assp=True):
 
             u2x = Conv2D('conva', u2_sum, 128, 5, strides=1, padding=pad)
             u2 = dense_blk('dense', u2x, [128, 32], [1, 5], 4, split=4, padding=pad)
-            u2 = Conv2D('convf', u2, i[-4].shape[1].value, 1, strides=1)   
+            u2 = Conv2D('convf', u2, i[-4].shape[1].value, 1, strides=1) 
+            #u2 = nonlocal_dot(u2, depth=128, embed=True, softmax=True, maxpool=2, scope='nonlocaldot') # Uncomment for non-local block
         ####
         with tf.variable_scope('u1'):          
             u1 = upsample2x('rz', u2)
