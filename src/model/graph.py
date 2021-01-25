@@ -21,6 +21,7 @@ except ImportError:
 # Change data format to 'NHWC'
 # Comment out: i = tf.transpose(images, [0, 3, 1, 2]) i = i if not self.input_norm else i / 255.0
 # Comment out: d[0] = crop_op(d[0], (184, 184)) d[1] = crop_op(d[1], (72, 72))
+#Padding = same in decoder
 #######################################################
 
     
@@ -304,7 +305,7 @@ def atrous_spatial_pyramid_pooling(x, filters=64):
 
 
 def decoder(name, i, use_assp=True):
-    pad = 'valid' 
+    pad = 'same' #Change to valid if non local 
     with tf.variable_scope(name):
         with tf.variable_scope('u3'):
             u3 = upsample2x('rz', i[-1])
