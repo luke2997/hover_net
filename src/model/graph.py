@@ -19,7 +19,8 @@ except ImportError:
 ############## IF USING NON-LOCAL ####################
 # Change to channels_last format
 # Change data format to 'NHWC'
-# Comment out: i = tf.transpose(images, [0, 3, 1, 2]) i = i if not self.input_norm else i / 255.0
+# Comment out: 
+#i = tf.transpose(images, [0, 3, 1, 2]) and replace it with: i = images
 # Comment out: d[0] = crop_op(d[0], (184, 184)) d[1] = crop_op(d[1], (72, 72))
 #Padding = same in decoder
 #######################################################
@@ -395,6 +396,7 @@ class Model_NP_HV(Model):
 
             i = tf.transpose(images, [0, 3, 1, 2])
             i = i if not self.input_norm else i / 255.0
+            #i = images #IF non local
 
             ####
             #d = encoder(i, self.freeze)
