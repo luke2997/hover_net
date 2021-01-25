@@ -15,6 +15,16 @@ try: # HACK: import beyond current level, may need to restructure
 except ImportError:
     assert False, 'Fail to import config.py'
 
+    
+############## IF USING NON-LOCAL ####################
+# Change to channels_last format
+# Change data format to 'NHWC'
+# Comment out: i = tf.transpose(images, [0, 3, 1, 2]) i = i if not self.input_norm else i / 255.0
+# Comment out: d[0] = crop_op(d[0], (184, 184)) d[1] = crop_op(d[1], (72, 72))
+#######################################################
+
+    
+    
 ####
 def upsample2x(name, x):
     """
