@@ -493,7 +493,7 @@ class Model_NP_HV(Model):
             ###########################
             alpha = 0.5
             huber_mse = alpha*(true-pred)**2
-            huber_mae = alpha*tf.math.abs(true-pred)
+            huber_mae = alpha*tf.math.abs(true-pred) - 0.5*(alpha**2)
             loss = tf.where((tf.math.abs(true - pred)) <= alpha, huber_mse, huber_mae,name=name)
             
             return tf.reduce_mean(loss)  
