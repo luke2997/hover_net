@@ -170,7 +170,26 @@ def encoder34(i, freeze):
 
     d4 = Conv2D('conv_bot', d4, 256, 1, padding='same')
     return [d1, d2, d3, d4]
-####
+
+def encoder18(i, freeze):
+    """
+    Pre-activated ResNet18 Encoder
+    """
+
+    d1 = Conv2D('conv0',  i, 64, 7, padding='valid', strides=1, activation=BNReLU)
+    d1 = res_blk2('group0', d1, [64,  64], [3,3], 3, strides=1, freeze=freeze)
+
+    d2 = res_blk2('group1', d1, [128, 128], [3,3], 2, strides=2, freeze=freeze)
+    d2 = tf.stop_gradient(d2) if freeze else d2
+
+    d3 = res_blk2('group2', d2, [256, 256], [3,3], 2, strides=2, freeze=freeze)
+    d3 = tf.stop_gradient(d3) if freeze else d3
+
+    d4 = res_blk2('group3', d3, [512, 512], [3,3], 2, strides=2, freeze=freeze)
+    d4 = tf.stop_gradient(d4) if freeze else d4
+
+    d4 = Conv2D('conv_bot', d4, 256, 1, padding='same')
+    return [d1, d2, d3, d4]
 
 def encoder101(i, freeze):
     """
