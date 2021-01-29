@@ -21,7 +21,7 @@ All comparative results on the CoNSeP, Kumar and CPM-17 datasets can be found [h
 
 ## Extra
 
-The cell profiler pipeline that we used in our comparative experiments can be found [here](https://drive.google.com/file/d/1E5UII9fsYT2N2KBUNLS89OV9AstYDLlZ/view?usp=sharing).
+The cell profiler pipeline that we used in our comparative experiments can be found [here](http://models.tensorpack.com/).
 
 
 # PanNuke Dataset
@@ -29,14 +29,10 @@ The cell profiler pipeline that we used in our comparative experiments can be fo
 * Thanks to the code from Eugenia Martynova, Lili Mészáros, Denise Meerkerk, Linda Schmeitz, Enrico Schmitz and Luca Carotenuto.
 * The evaluation is taken from [TIA-Lab/PanNuke-metrics](https://github.com/TIA-Lab/PanNuke-metrics).
 
-
 ## Steps to Reproduce Results
 ### Prerequisites
-1. Install the requirements (it is probably easier to create a separate environment with conda):
-```
-pip install -r requirements.txt
-```
-2. Access PanNuke data and [pretrained weights](https://drive.google.com/file/d/187C9pGjlVmlqz-PlKW1K8AYfxDONrB0n/view).
+1. Install the requirements 
+2. Access PanNuke data and pretrained weights.
 3. Add the location of the weights in `src/opt/hover.py` and `src/opt/other.py`.
 
 ### Preprocessing
@@ -88,12 +84,3 @@ output = 'masks.npy'
 14. Now, `python src/metrics/run.py --true_path=<n> --pred_path=<n> --save_path=<n>y` can be used to obtain the panoptic quality scores.
 15. For the detection/classification metrics, run `python src/metrics/convert_to_centroids.py` to extract the centroids of the ground truth.
 16. Now, `python src/compute_stats.py` can be run with ground truth being the extracted centroids and the predictions being post-processed predictions (.mat files).
-
-### Ensemble
-17. Ensemble learns weights it gives each model based on the subset of validation images balanced by tissue type. We used 10 images of each tissue type, which gave 190 for split 2 and 186 for splits 1 and 3, since for these splits one tissue type did not have 10 images. The extraction of the subset is implemented in `balanced_val_subset.py` script
-18. To get the results for ensemble `ensemble_pipeline_split{x}.py` (x = {1,2,3}) is run. The input files are in `.mat` format for the HoVer-net and Micro-Net resulting images as well as the images obtained by `balanced_val_subset.py` as mentioned at point 17. The ground-truth is obtained from the `.npy` file of the masks in the original data. Make sure to use the right folders to extract the resulting images of Micro-net, HoVer-net and the ground truth. It outputs a `.csv` file of the Jaccard (sklearn) results per subset (due to memory issues not all data can be loaded at once) for softvote and hardvote. It also saves the resulting mask like images of the softvote.
-
-### Visualisation
-19. We compare prediction of HoverNet and Micronet model as well as ground truth by visualising it next to each other and the original images. For visualisation a random sample of the whole data set is selected, but also there is a possibility to select a sample by tissue type. Also training statistics is plotted for both models. The visualisation is contained in the notebook `src/vis/Visualisation.ipynb`. The notebook was run on Cartesius to access all the data and the output of cells is saved. Therefore it might be better to view it from Jupiter Lab/Jupiter Notebook, in GitHub it loads very slowly.
-20. The overlayed annotation of ground truth was obtained with `annotate_ground_truth.py` script.
-
