@@ -6,7 +6,6 @@ from tensorpack.tfutils.summary import add_moving_summary, add_param_summary
 
 from .utils import *
 from nonlocal_resnet_utils import nonlocal_dot
-from .encoders import inception_encoder, densenet_encoder
 
 import sys
 sys.path.append("..") # adds higher directory to python modules path.
