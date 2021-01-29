@@ -1,8 +1,8 @@
 import math
-
 import cv2
 import matplotlib.cm as cm
 import numpy as np
+import random
 
 from scipy import ndimage
 from scipy.ndimage import measurements
@@ -17,6 +17,37 @@ from tensorpack.utils.utils import get_rng
 
 from misc.utils import cropping_center, bounding_box
 
+class CoarseDropout(ImageAugmentor):
+  def __init__(self, min_holes = 0, max_holes = 8, min_size = 1, max_size = 8):
+    super(CoarseDropout, self).__init__()
+    self._init(locals())
+    self.min_holes = min_holes
+    self.max_holes = max_holes
+    self.min_size = min_size
+    self.max_size = max_size
+    self.fillvalue = 0
+
+  def _get_augment_params(self, img):
+
+    height, width = img.shape[:2]
+    holes = []
+    for _n in range(random.randint(self.min_holes, self.max_holes)):
+        hole_height = random.randint(self.min_size, self.max_size)
+        hole_width = random.randint(self.min_size, self.max_size)
+
+        y1 = random.randint(0, height - hole_height)
+        x1 = random.randint(0, width - hole_width)
+        y2 = y1 + hole_height
+        x2 = x1 + hole_width
+        holes.append((x1, y1, x2, y2))
+
+    return holes
+
+  def _augment(self, img, holes):
+
+    for x1, y1, x2, y2 in holes:
+        img[y1:y2, x1:x2] = self.fillvalue
+    return img
 ####
 class GenInstance(ImageAugmentor):
     def __init__(self, crop_shape=None):
@@ -27,10 +58,6 @@ class GenInstance(ImageAugmentor):
         self.rng = get_rng(self)
 
     def _fix_mirror_padding(self, ann):
-        """
-        Deal with duplicated instances due to mirroring in interpolation
-        during shape augmentation (scale, rotation etc.)
-        """
         current_max_id = np.amax(ann)
         inst_list = list(np.unique(ann))
         inst_list.remove(0) # 0 is background
@@ -44,20 +71,6 @@ class GenInstance(ImageAugmentor):
 ####
 import matplotlib.pyplot as plt
 class GenInstanceUnetMap(GenInstance):
-    """
-    Input annotation must be of original shape.
-
-    Perform following operation:
-        1) Remove the 1px of boundary of each instance
-           to create separation between touching instances
-        2) Generate the weight map from the result of 1)
-           according to the unet paper equation.
-
-    Args:
-        wc (dict)        : Dictionary of weight classes.
-        w0 (int/float)   : Border weight parameter.
-        sigma (int/float): Border width parameter.
-    """
     def __init__(self, wc=None, w0=10.0, sigma=5.0, crop_shape=None):
         super(GenInstanceUnetMap, self).__init__()
         self.crop_shape = crop_shape
@@ -140,18 +153,6 @@ class GenInstanceUnetMap(GenInstance):
 
 ####
 class GenInstanceContourMap(GenInstance):
-    """
-    Input annotation must be of original shape.
-    
-    Perform following operation:
-        1) Dilate each instance by a kernel with 
-           a diameter of 7 pix.
-        2) Erode each instance by a kernel with 
-           a diameter of 7 pix.
-        3) Obtain the contour by subtracting the 
-           eroded instance from the dilated instance.
-    
-    """
     def __init__(self, crop_shape=None):
         super(GenInstanceContourMap, self).__init__()
         self.crop_shape = crop_shape
@@ -190,16 +191,6 @@ class GenInstanceContourMap(GenInstance):
 
 ####
 class GenInstanceHV(GenInstance):   
-    """
-        Input annotation must be of original shape.
-        
-        The map is calculated only for instances within the crop portion
-        but based on the original shape in original image.
-    
-        Perform following operation:
-        Obtain the horizontal and vertical distance maps for each
-        nuclear instance.
-    """
 
     def _augment(self, img, _):
         img = np.copy(img)
@@ -281,18 +272,6 @@ class GenInstanceHV(GenInstance):
 
 ####
 class GenInstanceDistance(GenInstance):   
-    """
-    Input annotation must be of original shape.
-    
-    The map is calculated only for instances within the crop portion
-    but based on the original shape in original image.
-    
-    Perform following operation:
-    Obtain the standard distance map of nuclear pixels to their closest
-    boundary.
-    Can be interpreted as the inverse distance map of nuclear pixels to 
-    the centroid. 
-    """
     def __init__(self, crop_shape=None, inst_norm=True):
         super(GenInstanceDistance, self).__init__()
         self.crop_shape = crop_shape
