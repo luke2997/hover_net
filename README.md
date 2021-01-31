@@ -6,7 +6,7 @@ This code is based on the implementation of [Quoc Dang Vu](https://github.com/vq
 
 ## Dataset
 
-Datasets can be found here [this link](https://warwick.ac.uk/fac/sci/dcs/research/tia/data/). <br />
+Download the CoNSeP dataset here: [CoNSeP](https://drive.google.com/file/d/1gn3gaiOdZCnRBldzh6doogYGARAzG7m0/view?usp=sharing)
 
 
 The colour of the nuclear boundary denotes the type of nucleus. <br />
