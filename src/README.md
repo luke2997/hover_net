@@ -37,7 +37,7 @@ where gpu_id denotes which GPU will be used for training. For example, if we are
 `python train.py --gpu='0,1'` <br/>
 
 Before training, set in `config.py`:
-- path to pretrained weights Preact-ResNet50. Download the weights [here](https://drive.google.com/open?id=187C9pGjlVmlqz-PlKW1K8AYfxDONrB0n).
+- path to pretrained weights. Download the weights [here](http://models.tensorpack.com/).
 - path to the data directories
 - path where checkpoints will be saved
 
@@ -53,9 +53,7 @@ Before running inference, set in `config.py`:
 - path to data root directories
 - path to model checkpoint
 
-Download the HoVer-Net instance segmentation checkpoints trained on: [Kumar](https://drive.google.com/open?id=13S7VPu-4uRUQlgA5r-FO5NcA4q3nyif7), [CoNSeP](https://drive.google.com/open?id=1Yk62MtSOfopDSZT5g0ZaoaeAoRTeWUj4), [CPM-17](https://drive.google.com/open?id=1YdEfxhSt57gNL5sgWiXOZNLIkhMrnE_v)
-
-Download the HoVer-Net instance segmentation and classification checkpoints, trained on: [CoNSeP](https://drive.google.com/open?id=1cM_iBtkUdpiblNx6Kc5Te2EKLC3hyS4b)
+Download the CoNSeP dataset here: [CoNSeP](https://drive.google.com/file/d/1gn3gaiOdZCnRBldzh6doogYGARAzG7m0/view?usp=sharing)
 
 To obtain the final instance segmentation, use the command: <br/>
 `python process.py` <br/>
