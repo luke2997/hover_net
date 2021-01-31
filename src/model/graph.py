@@ -127,6 +127,80 @@ def dense_block(x, freeze, blocks, name):
     x = tf.stop_gradient(x) if freeze else x
   return x
 
+def inception(name, x, nr1x1, nr3x3r, nr3x3, nr233r, nr233, nrpool, pooltype, freeze):
+  """
+  Inception block
+  """
+  stride = 2 if nr1x1 == 0 else 1
+  with tf.variable_scope(name):
+    outs = []
+    if nr1x1 != 0:
+      outs.append(Conv2D('conv1x1', x, nr1x1, 1))
+    x2 = Conv2D('conv3x3r', x, nr3x3r, 1)
+    outs.append(Conv2D('conv3x3', x2, nr3x3, 3, strides=stride))
+
+    x3 = Conv2D('conv233r', x, nr233r, 1)
+    x3 = Conv2D('conv233a', x3, nr233, 3)
+    outs.append(Conv2D('conv233b', x3, nr233, 3, strides=stride))
+
+    if pooltype == 'max':
+      x4 = MaxPooling('mpool', x, 3, stride, padding='SAME')
+    else:
+      assert pooltype == 'avg'
+      x4 = AvgPooling('apool', x, 3, stride, padding='SAME')
+    if nrpool != 0:  # pool + passthrough if nrpool == 0
+      x4 = Conv2D('poolproj', x4, nrpool, 1)
+    outs.append(x4)
+    l =  tf.concat(outs, 1, name='concat')
+    l = tf.stop_gradient(l) if freeze else l
+    return l
+
+############################################
+#### SQUEEZE AND EXCITATION RESNET 50 ####
+############################################
+
+def get_bn(zero_init=False):
+    if zero_init:
+        return lambda x, name=None: BatchNorm('bn', x, gamma_initializer=tf.zeros_initializer())
+    else:
+        return lambda x, name=None: BatchNorm('bn', x)
+
+def resnet_shortcut(l, n_out, stride, activation=tf.identity):
+    data_format = get_arg_scope()['Conv2D']['data_format']
+    n_in = l.get_shape().as_list()[1 if data_format in ['NCHW', 'channels_first'] else 3]
+    if n_in != n_out:   # change dimension when channel is not the same
+        return Conv2D('convshortcut', l, n_out, 1, strides=stride, activation=activation)
+    else:
+        return l
+
+def se_bottleneck(l, ch_out, stride):
+    shortcut = l
+    l = Conv2D('conv1', l, ch_out, 1, activation=BNReLU)
+    l = Conv2D('conv2', l, ch_out, 3, strides=stride, activation=BNReLU)
+    l = Conv2D('conv3', l, ch_out * 4, 1, activation=get_bn(zero_init=True))
+
+    squeeze = GlobalAvgPooling('gap', l)
+    squeeze = FullyConnected('fc1', squeeze, ch_out // 4, activation=tf.nn.relu)
+    squeeze = FullyConnected('fc2', squeeze, ch_out * 4, activation=tf.nn.sigmoid)
+    data_format = get_arg_scope()['Conv2D']['data_format']
+    ch_ax = 1 if data_format in ['NCHW', 'channels_first'] else 3
+    shape = [-1, 1, 1, 1]
+    shape[ch_ax] = ch_out * 4
+    l = l * tf.reshape(squeeze, shape)
+    out = l + resnet_shortcut(shortcut, ch_out * 4, stride, activation=get_bn(zero_init=False))
+    return tf.nn.relu(out)
+
+
+def res_se_blk(name, l, ch, ksize, count, split=1, strides=1, freeze=False):
+    ch_in = l.get_shape().as_list()
+    with tf.variable_scope(name):
+        for i in range(0, count):
+            with tf.variable_scope('block' + str(i)):
+                if i != 0:
+                    strides = 1
+                l = se_bottleneck(l, ch, strides)
+        l = BNReLU('bnlast',l)
+    return l
 
 ###############################################################
 ##################### ENCODERS: ###############################
@@ -212,34 +286,32 @@ def encoder101(i, freeze):
     d4 = Conv2D('conv_bot', d4, 1024, 1, padding='same')
     return [d1, d2, d3, d4]
 
-def inception(name, x, nr1x1, nr3x3r, nr3x3, nr233r, nr233, nrpool, pooltype, freeze):
-  
-  stride = 2 if nr1x1 == 0 else 1
-  with tf.variable_scope(name):
-    outs = []
-    if nr1x1 != 0:
-      outs.append(Conv2D('conv1x1', x, nr1x1, 1))
-    x2 = Conv2D('conv3x3r', x, nr3x3r, 1)
-    outs.append(Conv2D('conv3x3', x2, nr3x3, 3, strides=stride))
+def encoder(i, freeze):
+    """
+    SQUEEZE AND EXCITATION RESNET 50
+    """
 
-    x3 = Conv2D('conv233r', x, nr233r, 1)
-    x3 = Conv2D('conv233a', x3, nr233, 3)
-    outs.append(Conv2D('conv233b', x3, nr233, 3, strides=stride))
+    d1 = Conv2D('conv0',  i, 64, 7, padding='valid', strides=1, activation=BNReLU)
+    d1 = res_se_blk('group0', d1, 64, [1, 3, 1], 3, strides=1, freeze=freeze)
 
-    if pooltype == 'max':
-      x4 = MaxPooling('mpool', x, 3, stride, padding='SAME')
-    else:
-      assert pooltype == 'avg'
-      x4 = AvgPooling('apool', x, 3, stride, padding='SAME')
-    if nrpool != 0:  # pool + passthrough if nrpool == 0
-      x4 = Conv2D('poolproj', x4, nrpool, 1)
-    outs.append(x4)
-    l =  tf.concat(outs, 1, name='concat')
-    l = tf.stop_gradient(l) if freeze else l
-    return l
+    d2 = res_se_blk('group1', d1, 128, [1, 3, 1], 4, strides=2, freeze=freeze)
+    d2 = tf.stop_gradient(d2) if freeze else d2
+
+    d3 = res_se_blk('group2', d2, 256, [1, 3, 1], 6, strides=2, freeze=freeze)
+    d3 = tf.stop_gradient(d3) if freeze else d3
+
+    d4 = res_se_blk('group3', d3, 512, [1, 3, 1], 3, strides=2, freeze=freeze)
+    d4 = tf.stop_gradient(d4) if freeze else d4
+
+    d4 = Conv2D('conv_bot',  d4, 1024, 1, padding='same')
+    return [d1, d2, d3, d4]
+
+
     
 def inception_encoder(i, freeze):
-  
+    """
+    Inception v2 BN
+    """
   with argscope(Conv2D, activation=BNReLU, use_bias=False):
     d1 = (LinearWrap(i)
          .Conv2D('conv0', 64, 7, strides=1, padding='valid')
@@ -267,7 +339,9 @@ def inception_encoder(i, freeze):
   
 
 def densenet_encoder(x, freeze, blocks = [6, 12, 24, 16]):
-  
+    """
+    DenseNet 
+    """ 
   x = Conv2D('conv1/conv', x, 64, 7, padding='valid', strides=1, activation=BNReLU)
   d1 = dense_block(x, freeze, blocks[0], name='conv2')
   x = transition_block(x, 1, name='pool2')
@@ -284,7 +358,10 @@ def densenet_encoder(x, freeze, blocks = [6, 12, 24, 16]):
 
 
 def atrous_spatial_pyramid_pooling(x, filters=64):
-  
+    """
+    ASPP layer: Dilated convolutions with rate tau = (6,12,18)
+    """
+
   pad = 'valid'      
   with tf.variable_scope('ASSP_layers'):
 
