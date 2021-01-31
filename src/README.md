@@ -2,14 +2,7 @@
 
 ## Choosing the network
 
-The model to use and the selection of other hyperparameters is selected in `config.py`. The models available are:
 - HoVer-Net: `model/graph.py`
-- DIST: `model/dist.py`
-- Micro-Net: `model/micronet.py`
-- DCAN: `model/dcan.py`
-- SegNet: `model/segnet.py`
-- U-Net: `model/unet.py`
-- FCN8: `model/fcn8.py`
 
 We also include a modification of HoVer-Net, where the distance maps from the nuclear centroids are used, instead of our proposed horizontal and vertical maps. This is also located at `model/graph.py`.
 
@@ -17,12 +10,6 @@ To use the above models, modify `mode` and `self.model_type` in `config.py` as f
 
 - HoVer-Net: `mode='hover'` , `self.model_type=np_hv`
 - HoVer-Net (distance map modification): `mode='hover'` , `self.model_type=np_dist`
-- DIST: `mode='other'` , `self.model_type=dist`
-- Micro-Net: `mode='other'` , `self.model_type=micronet`
-- DCAN: `mode='other'` , `self.model_type=dcan`
-- SegNet: `mode='other'` , `self.model_type=segnet`
-- U-Net: `mode='other'` , `self.model_type=unet`
-- FCN8: `mode='other'` , `self.model_type=fcn8`
 
 ## Modifying Hyperparameters
 
