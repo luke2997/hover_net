@@ -179,7 +179,7 @@ def se_bottleneck(l, ch_out, stride):
     l = Conv2D('conv2', l, ch_out, 3, strides=stride, activation=BNReLU)
     l = Conv2D('conv3', l, ch_out * 4, 1, activation=get_bn(zero_init=True))
 
-    squeeze = GlobalAvgPooling('gap', l)
+    squeeze = GlobalAvgPooling('gap', l,'channels_first')
     squeeze = FullyConnected('fc1', squeeze, ch_out // 4, activation=tf.nn.relu)
     squeeze = FullyConnected('fc2', squeeze, ch_out * 4, activation=tf.nn.sigmoid)
     data_format = get_arg_scope()['Conv2D']['data_format']
@@ -286,7 +286,7 @@ def encoder101(i, freeze):
     d4 = Conv2D('conv_bot', d4, 1024, 1, padding='same')
     return [d1, d2, d3, d4]
 
-def encoder(i, freeze):
+def SE_encoder(i, freeze):
     """
     SQUEEZE AND EXCITATION RESNET 50
     """
@@ -361,7 +361,6 @@ def atrous_spatial_pyramid_pooling(x, filters=64):
     """
     ASPP layer: Dilated convolutions with rate tau = (6,12,18)
     """
-
   pad = 'valid'      
   with tf.variable_scope('ASSP_layers'):
 
