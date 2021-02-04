@@ -642,7 +642,7 @@ class Model_NP_HV(Model):
             add_moving_summary(self.cost)
             ####
 
-            add_param_summary(('.*/W', ['histogram']))   # monitor W
+            #add_param_summary(('.*/W', ['histogram']))   # monitor W
 
             ### logging visual sthg
             orig_imgs = tf.cast(orig_imgs  , tf.uint8)
@@ -747,7 +747,7 @@ class Model_NP_DIST(Model):
             eps = 1e-6
             huber_mse = 0.5*(true_dist-pred_dist)**2
             huber_novel = alpha*tf.math.log((0.5*(1+tf.math.exp(delta*(true_dist-pred_dist)+eps)))**(2/delta))-(true_dist-pred_dist)
-            loss_mse = tf.where((tf.math.abs(true_dist - pred_dist)) < alpha, huber_mse, huber_mae ,name='loss-mse')
+            loss_mse = tf.where((tf.math.abs(true_dist - pred_dist)) < alpha, huber_mse, huber_novel ,name='loss-mse')
             add_moving_summary(loss_mse)   
        
             ### Nuclei Blob classification loss
@@ -760,7 +760,7 @@ class Model_NP_DIST(Model):
             add_moving_summary(self.cost)
             ####
 
-            add_param_summary(('.*/W', ['histogram']))   # monitor W
+            #add_param_summary(('.*/W', ['histogram']))   # monitor W
 
             #### logging visual sthg
             orig_imgs = tf.cast(orig_imgs  , tf.uint8)
