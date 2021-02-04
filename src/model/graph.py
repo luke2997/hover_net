@@ -582,7 +582,7 @@ class Model_NP_HV(Model):
             delta = 2
             eps = 1e-6
             huber_smooth_mse = alpha*(true-pred)**2
-            huber_novel = alpha*tf.math.log((0.5*(1+tf.math.exp(delta*(true-pred)+eps)))**(2/delta))-(true-pred)
+            huber_novel = alpha*tf.math.log1p((0.5*(1+tf.math.exp(delta*(true-pred)+eps)))**(2/delta))-(true-pred)
             loss = tf.where((tf.math.abs(true - pred)) <= alpha, huber_smooth_mse, huber_novel,name=name)
             return tf.reduce_mean(loss)  
   
