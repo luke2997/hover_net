@@ -11,7 +11,9 @@ from scipy.ndimage.interpolation import affine_transform, map_coordinates
 from scipy.ndimage.morphology import (distance_transform_cdt,
                                       distance_transform_edt)
 from skimage import morphology as morph
+from skimage.exposure import equalize_hist, rescale_intensity
 
+from matplotlib.colors import LinearSegmentedColormap
 from tensorpack.dataflow.imgaug import ImageAugmentor
 from tensorpack.utils.utils import get_rng
 
@@ -361,7 +363,38 @@ class BinarizeLabel(ImageAugmentor):
         arr = img[...,0]
         arr[arr > 0] = 1
         return img
+      
+class eqHistCV(ImageAugmentor):
+    def __init__(self,):
+        super(eqHistCV, self).__init__()
 
+    def _get_augment_params(self, img):
+        return None
+
+    def _augment(self, img, s):
+        R, G, B = cv2.split(np.uint8(img))
+        return cv2.merge((cv2.equalizeHist(R), cv2.equalizeHist(G), cv2.equalizeHist(B)))
+####
+class pipeHEDAugment(ImageAugmentor):
+    def __init__(self,):
+        super(pipeHEDAugment, self).__init__()
+
+    def _get_augment_params(self, img):
+        return None
+
+    def _augment(self, img, s):
+        ihc_hed = rgb2hed(img)
+        h = rescale_intensity(ihc_hed[..., 0], out_range=(0, 1))
+        d = rescale_intensity(ihc_hed[..., 2], out_range=(0, 1))
+        return img_as_ubyte(np.dstack((np.zeros_like(h), d, h)))
+      
+####
+class linearAugmentation(ImageAugmentor):
+    def __init__(self,):
+        super(linearAugmentation, self).__init__()
+
+    def _get_augment_params(self, img):
+        return None
 ####
 class MedianBlur(ImageAugmentor):
     """ Median blur the image with random window size"""
