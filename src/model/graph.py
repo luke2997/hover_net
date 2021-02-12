@@ -567,9 +567,9 @@ class Model_NP_HV(Model):
             #Standard Huber Loss:
             ###########################
             alpha = 0.5
-            huber_mse = alpha*(true-pred)**2
-            huber_mae = alpha*tf.math.abs(true-pred) - 0.5*(alpha**2)
-            loss = tf.where((tf.math.abs(true - pred)) <= alpha, huber_mse, huber_mae,name=name)
+            f1= alpha*(true-pred)**2
+            f2 = alpha*tf.math.abs(true-pred) - 0.5*(alpha**2)
+            loss = tf.where((tf.math.abs(true - pred)) <= alpha, f1, f2 ,name=name)
             
             return tf.reduce_mean(loss)  
         
@@ -578,12 +578,29 @@ class Model_NP_HV(Model):
             ###########################
             #Smoother Huber Loss:
             ###########################
+            
             alpha = 0.5
-            delta = 2
-            eps = 1e-6
-            huber_smooth_mse = alpha*(true-pred)**2
-            huber_novel = alpha*tf.math.log1p((0.5*(1+tf.math.exp(delta*(true-pred)+eps)))**(2/delta))-(true-pred)
-            loss = tf.where((tf.math.abs(true - pred)) <= alpha, huber_smooth_mse, huber_novel,name=name)
+            delta = 1
+            
+            if true - pred == alpha:
+                g1 = 2*alpha + tf.math.log1p((1+tf.math.exp(delta*(alpha)))**(-2/delta))
+                g2 = 0
+            
+            elif true - pred == -alpha:
+                g1 = 0
+                g2 = tf.math.log1p((1+tf.math.exp(delta*(-alpha)))**(-2/delta))
+            
+            else:
+                g1 = 0
+                g2 = 0
+            
+            
+            f1 = alpha*(true-pred)**2
+            
+            f2 = alpha*tf.math.log1p((1+tf.math.exp(delta*(true-pred)))**(2/delta))-(true-pred) + g1 + g2
+            
+            loss = tf.where((tf.math.abs(true - pred)) <= alpha, f1, f2 ,name=name)
+            
             return tf.reduce_mean(loss)  
   
     
