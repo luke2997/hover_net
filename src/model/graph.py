@@ -766,12 +766,27 @@ class Model_NP_DIST(Model):
         if get_current_tower_context().is_training:
             ######## LOSS
             ### Distance regression loss
-            alpha=0.5
-            delta = 2
-            eps = 1e-6
-            huber_mse = 0.5*(true_dist-pred_dist)**2
-            huber_novel = alpha*tf.math.log((0.5*(1+tf.math.exp(delta*(true_dist-pred_dist)+eps)))**(2/delta))-(true_dist-pred_dist)
-            loss_mse = tf.where((tf.math.abs(true_dist - pred_dist)) < alpha, huber_mse, huber_novel ,name='loss-mse')
+            alpha = 0.5 
+            delta = 1 
+            res = true - pred
+
+            if res == alpha:
+                g1 = 2*alpha + tf.math.log(0.5*(1+tf.math.exp(delta*(alpha)))**(-2/delta))
+                g2 = 0
+            
+            elif res == -alpha:
+                g1 = 0
+                g2 = tf.math.log(0.5*(1+tf.math.exp(delta*(-alpha)))**(-2/delta))
+            
+            else:
+                g1 = 0
+                g2 = 0
+                      
+            f1 = alpha*(res)**2
+            f2 = alpha*(tf.math.log(0.5*(1+tf.math.exp(delta*(res)))**(2/delta))-(res) + g1 + g2)
+            
+            loss_mse = tf.reduce_mean(tf.where((tf.math.abs(res)) <= alpha, f1, f2 ,name='loss_mse'))
+       
             add_moving_summary(loss_mse)   
        
             ### Nuclei Blob classification loss
