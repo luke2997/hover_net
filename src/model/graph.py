@@ -573,6 +573,13 @@ class Model_NP_HV(Model):
             
             return tf.reduce_mean(loss)  
         
+        def pseudo_huber(true,pred,name=None):
+            ###########################
+            #Standard Huber Loss:
+            ###########################
+            delta=0.5
+            loss = delta**2 * (sqrt(1 + ((true - pred)/delta)**2) - 1)
+            return tf.reduce_mean(loss)
         
         def loss_huber_smooth(true,pred,name=None):
             ###########################
