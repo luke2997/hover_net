@@ -604,7 +604,7 @@ class Model_NP_HV(Model):
             
             f1 = alpha*(true-pred)**2
             
-            f2 = alpha*tf.math.log1p((1+tf.math.exp(delta*(true-pred)))**(2/delta))-(true-pred) + g1 + g2
+            f2 = alpha*(tf.math.log1p((1+tf.math.exp(delta*(true-pred)))**(2/delta))-(true-pred) + g1 + g2)
             
             loss = tf.where((tf.math.abs(true - pred)) <= alpha, f1, f2 ,name=name)
             
