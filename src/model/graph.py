@@ -550,14 +550,13 @@ class Model_NP_HV(Model):
 #                  LOSS FUNCTIONS
 #######################################################
 
-#Loss for distances using horizontal/vertical distance to nuclear centroids.
-
         def loss_mse(true,pred,name=None):
             ###########################
             #Standard MSE:
             ###########################
-            loss = pred - true
-            loss = tf.reduce_mean(loss * loss, name=name)
+            res = pred - true
+            loss = res**2
+            loss = tf.reduce_mean(loss, name=name)
             
             return loss
         
@@ -567,9 +566,10 @@ class Model_NP_HV(Model):
             #Standard Huber Loss:
             ###########################
             alpha = 0.5
-            f1= alpha*(true-pred)**2
-            f2 = alpha*tf.math.abs(true-pred) - 0.5*(alpha**2)
-            loss = tf.where((tf.math.abs(true - pred)) <= alpha, f1, f2 ,name=name)
+            res = true - pred
+            f1= alpha*(res)**2
+            f2 = alpha*tf.math.abs(res) - 0.5*(alpha**2)
+            loss = tf.where((tf.math.abs(res)) <= alpha, f1, f2 ,name=name)
             
             return tf.reduce_mean(loss)  
         
@@ -578,7 +578,8 @@ class Model_NP_HV(Model):
             #Standard Huber Loss:
             ###########################
             delta=0.5
-            loss = delta**2 * (sqrt(1 + ((true - pred)/delta)**2) - 1)
+            res = true - pred
+            loss = delta**2 * (sqrt(1 + ((res)/delta)**2) - 1)
             return tf.reduce_mean(loss)
         
         def loss_huber_smooth(true,pred,name=None):
@@ -586,28 +587,27 @@ class Model_NP_HV(Model):
             #Smoother Huber Loss:
             ###########################
             
-            alpha = 0.5
-            delta = 1
+            alpha = 0.5 #Determines how much you want to penalise outliers in your dataset. 
+            delta = 1 #When delta -> 0 it becomes smoother. Try to pick delta > 1e-5 otherwise 2/delta becomes too large. 
+            res = true - pred
+            #If code is too slow, then set g_j(delta) = 0 as continuity doesn't make too much difference to results.
             
-            if true - pred == alpha:
-                g1 = 2*alpha + tf.math.log1p((1+tf.math.exp(delta*(alpha)))**(-2/delta))
+            if res == alpha:
+                g1 = 2*alpha + tf.math.log(0.5*(1+tf.math.exp(delta*(alpha)))**(-2/delta))
                 g2 = 0
             
-            elif true - pred == -alpha:
+            elif res == -alpha:
                 g1 = 0
-                g2 = tf.math.log1p((1+tf.math.exp(delta*(-alpha)))**(-2/delta))
+                g2 = tf.math.log(0.5*(1+tf.math.exp(delta*(-alpha)))**(-2/delta))
             
             else:
                 g1 = 0
                 g2 = 0
+                      
+            f1 = alpha*(res)**2
+            f2 = alpha*(tf.math.log(0.5*(1+tf.math.exp(delta*(res)))**(2/delta))-(res) + g1 + g2)
             
-            
-            f1 = alpha*(true-pred)**2
-            
-            f2 = alpha*(tf.math.log1p((1+tf.math.exp(delta*(true-pred)))**(2/delta))-(true-pred) + g1 + g2)
-            
-            loss = tf.where((tf.math.abs(true - pred)) <= alpha, f1, f2 ,name=name)
-            
+            loss = tf.where((tf.math.abs(res)) <= alpha, f1, f2 ,name=name)
             return tf.reduce_mean(loss)  
   
     
